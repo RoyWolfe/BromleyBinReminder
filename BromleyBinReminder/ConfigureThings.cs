@@ -26,6 +26,7 @@ public class ConfigureThings
         services.AddSingleton<BromleyApiOptions>(bromleyApiOptions); 
         services.AddSingleton<TelegramBinPoster>();
         services.AddSingleton<BromleyBinToTelegramRunner>();
+        services.AddSingleton<BromleyBinCalendarFetcher>();
 
         var loggerFactory = LoggerFactory.Create(builder =>
         {
