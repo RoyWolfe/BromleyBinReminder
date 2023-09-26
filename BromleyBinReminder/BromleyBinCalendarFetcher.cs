@@ -1,9 +1,9 @@
 ﻿namespace BromleyBinReminder;
 
-using System.Net;
 using Ical.Net;
 using Microsoft.Extensions.Logging;
 using Options;
+using System.Net;
 
 public class BromleyBinCalendarFetcher
 {
@@ -30,16 +30,15 @@ public class BromleyBinCalendarFetcher
         client = new HttpClient(handler);
     }
 
-    public async Task<IEnumerable<BinEvent>> LoadBinEvents()
+    public async Task<IEnumerable<BinEvent>> LoadBinEvents(DateTime dayToLoadFor)
     {
         _logger.LogDebug("Ensuring calendar file exists");
         await EnsureRecentCalendarFile();
 
-        var icalText = await File.ReadAllTextAsync(_bromleyApiOptions.CalendarSaveFileName);
-        var calendar = Calendar.Load(icalText);
+        var calendar = await LoadCalendar();
 
         var tomorrowsEvents = calendar.Events
-            .Where(e => e.DtStart.AsSystemLocal.Day == DateTime.Now.AddDays(1).Day)
+            .Where(e => e.DtStart.AsSystemLocal.Day == dayToLoadFor.Day)
             .GroupBy(e => e.DtStart.AsSystemLocal)
             .Select(g => new BinEvent
             {
@@ -50,7 +49,14 @@ public class BromleyBinCalendarFetcher
         return tomorrowsEvents;
     }
 
-    private async Task EnsureRecentCalendarFile()
+    protected virtual async Task<Calendar> LoadCalendar()
+    {
+        var icalText = await File.ReadAllTextAsync(_bromleyApiOptions.CalendarSaveFileName);
+        var calendar = Ical.Net.Calendar.Load(icalText);
+        return calendar;
+    }
+
+    protected virtual async Task EnsureRecentCalendarFile()
     {
         var calendarFileInfo = new FileInfo(_bromleyApiOptions.CalendarSaveFileName);
 

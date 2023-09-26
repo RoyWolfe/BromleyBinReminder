@@ -18,8 +18,7 @@ public class TelegramBinPoster
 
     public async Task<Response<TextMessage>> PostReminderMessage(string message)
     {
-        var photoRequest = new SendText(_options.TargetChatId, message);
-        
-        return await _botClient.HandleAsync(photoRequest);
+        var textRequest = new SendText(_options.TargetChatId, message);
+        return await _botClient.HandleAsync(textRequest);
     }
 }

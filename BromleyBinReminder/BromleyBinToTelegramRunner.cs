@@ -1,7 +1,7 @@
 ﻿namespace BromleyBinReminder;
 
-using System.Text;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 public class BromleyBinToTelegramRunner
 {
@@ -19,7 +19,7 @@ public class BromleyBinToTelegramRunner
     public async Task RunBinReminder()
     {
         _logger.LogDebug("Loading bin events");
-        var binEvents = await _calendarFetcher.LoadBinEvents();
+        var binEvents = await _calendarFetcher.LoadBinEvents(DateTime.Now.AddDays(1));
 
         _logger.LogDebug("Sending bin events to telegram");
         foreach (var binEvent in binEvents)
