@@ -36,13 +36,14 @@ namespace Tests
         public async void LoadsNoEventForYesterday()
         {
             DateTime testDate = new DateTime(2020, 1, 1, 18, 30, 5);
+            var dayToLoadFor = testDate.Subtract(TimeSpan.FromDays(1));
 
             var calendar = MakeTestCalendar(testDate);
 
             ILogger logger = NSubstitute.Substitute.For<ILogger>();
             var sut = new TestBinCalendarFetcher(calendar, logger, new BromleyApiOptions());
 
-            var binEvents = await sut.LoadBinEvents(testDate.Subtract(TimeSpan.FromDays(1)));
+            var binEvents = await sut.LoadBinEvents(dayToLoadFor);
 
             Assert.Empty(binEvents);
         }
@@ -51,13 +52,30 @@ namespace Tests
         public async void LoadsNoEventForTomorrow()
         {
             DateTime testDate = new DateTime(2020, 1, 1, 18, 30, 5);
+            var dayToLoadFor = testDate.AddDays(1);
 
             var calendar = MakeTestCalendar(testDate);
 
             ILogger logger = NSubstitute.Substitute.For<ILogger>();
             var sut = new TestBinCalendarFetcher(calendar, logger, new BromleyApiOptions());
 
-            var binEvents = await sut.LoadBinEvents(testDate.Add(TimeSpan.FromDays(1)));
+            var binEvents = await sut.LoadBinEvents(dayToLoadFor);
+
+            Assert.Empty(binEvents);
+        }
+
+        [Fact]
+        public async void LoadsNoEventForSameDayNextMonth()
+        {
+            var testDate =     new DateTime(2020, 1, 1, 18, 30, 5);
+            var dayToLoadFor = new DateTime(2020, 2, 1, 18, 30, 5);
+
+            var calendar = MakeTestCalendar(testDate);
+
+            ILogger logger = NSubstitute.Substitute.For<ILogger>();
+            var sut = new TestBinCalendarFetcher(calendar, logger, new BromleyApiOptions());
+
+            var binEvents = await sut.LoadBinEvents(dayToLoadFor);
 
             Assert.Empty(binEvents);
         }

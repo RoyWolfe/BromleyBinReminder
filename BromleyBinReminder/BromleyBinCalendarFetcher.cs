@@ -4,6 +4,7 @@ using Ical.Net;
 using Microsoft.Extensions.Logging;
 using Options;
 using System.Net;
+using Ical.Net.CalendarComponents;
 
 public class BromleyBinCalendarFetcher
 {
@@ -38,7 +39,7 @@ public class BromleyBinCalendarFetcher
         var calendar = await LoadCalendar();
 
         var tomorrowsEvents = calendar.Events
-            .Where(e => e.DtStart.AsSystemLocal.Day == dayToLoadFor.Day)
+            .Where(e => e.DtStart.AsSystemLocal.Date == dayToLoadFor.Date)
             .GroupBy(e => e.DtStart.AsSystemLocal)
             .Select(g => new BinEvent
             {
