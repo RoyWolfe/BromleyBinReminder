@@ -33,7 +33,20 @@ public class BromleyBinToTelegramRunner
                     sb.Append($"\n • {bin}");
                 }
 
-                await _telegramBinPoster.PostReminderMessage(sb.ToString());
+                try
+                {
+                    var messageResult = await _telegramBinPoster.PostReminderMessage(sb.ToString());
+                    if (!messageResult.Ok)
+                    {
+                        var failure = messageResult.Failure;
+                        _logger.LogError($"Problem sending message to Telegram: ${failure.ErrorCode} - {failure.Description}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Error sending message to Telegram.");
+                    throw;
+                }
             }
             else
             {
