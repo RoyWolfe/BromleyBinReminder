@@ -8,8 +8,10 @@ namespace Tests
     using Microsoft.Extensions.Logging;
     using NSubstitute;
     using System;
+    using System.Threading.Tasks;
     using Telegram.Bots;
     using Telegram.Bots.Requests;
+    using Telegram.Bots.Types;
     using Xunit;
 
     public class RunnerTests
@@ -25,6 +27,10 @@ namespace Tests
             var calendarFetcher = new TestBinCalendarFetcher(calendar, logger, new BromleyApiOptions());
 
             var botClient = Substitute.For<IBotClient>();
+            botClient
+                .HandleAsync(Arg.Any<SendText>())
+                .Returns(Task.FromResult(new Response<TextMessage>(new TextMessage())));
+
             var runner = new BromleyBinToTelegramRunner(new TelegramBinPoster(botClient, new TelegramOptions()), calendarFetcher, logger);
 
             await runner.RunBinReminder();
