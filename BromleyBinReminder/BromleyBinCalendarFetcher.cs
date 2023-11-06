@@ -4,6 +4,7 @@ using Ical.Net;
 using Microsoft.Extensions.Logging;
 using Options;
 using System.Net;
+using System.Text;
 
 public class BromleyBinCalendarFetcher
 {
@@ -74,33 +75,57 @@ public class BromleyBinCalendarFetcher
             cookies.Add(new Uri(calendarUrl), bromAuthCookie);
 
             _logger.LogInformation("Loading new calendar file");
-            
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, calendarUrl);
-            request.Headers.Referrer = new Uri($"{baseUrl}/{_bromleyApiOptions.HouseIdentifier}");
-            request.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36");
-            request.Headers.Add("Cookie", $"{bromAuthCookie.Name}={bromAuthCookie.Value}");
-            
-            using HttpResponseMessage response = await client.SendAsync(request);
-            
-            try
+
+            var errorContentStartPattern = "<!doctype";
+
+            var successfulDownload = false;
+            for (int i = 0; i < 5 && !successfulDownload; i++)
             {
-                response.EnsureSuccessStatusCode();
-            }
-            catch (Exception e)
-            {
-                var foo = await response.Content.ReadAsStringAsync();
-                _logger.LogError(e, foo);
-                throw;
+                var responseBody = await FetchCalendarUrlContent(calendarUrl, baseUrl, bromAuthCookie);
+
+                var firstPartOfResponse = responseBody.Substring(0, 50); // Response may or may not start with \n\n
+
+                if (firstPartOfResponse.Contains(errorContentStartPattern, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    _logger.LogWarning("Downloaded content looked like the un-cookie'd response. Retrying ...");
+                    await Task.Delay(2500);
+                }
+                else
+                {
+                    await File.WriteAllTextAsync(_bromleyApiOptions.CalendarSaveFileName, responseBody, Encoding.UTF8);
+                    successfulDownload = true;
+                }
             }
 
-            var responseBody = await response.Content.ReadAsStreamAsync();
-
-            using (var fileStream = File.Create(_bromleyApiOptions.CalendarSaveFileName))
+            if (!successfulDownload)
             {
-                responseBody.Seek(0, SeekOrigin.Begin);
-                await responseBody.CopyToAsync(fileStream);
+                throw new InvalidOperationException("Could not download calendar after 5 tries");
             }
         }
+    }
+
+    private async Task<string> FetchCalendarUrlContent(string calendarUrl, string baseUrl, Cookie bromAuthCookie)
+    {
+        HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, calendarUrl);
+        request.Headers.Referrer = new Uri($"{baseUrl}/{_bromleyApiOptions.HouseIdentifier}");
+        request.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36");
+        request.Headers.Add("Cookie", $"{bromAuthCookie.Name}={bromAuthCookie.Value}");
+
+        using HttpResponseMessage response = await client.SendAsync(request);
+
+        try
+        {
+            response.EnsureSuccessStatusCode();
+        }
+        catch (Exception e)
+        {
+            var errorResponseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogError(e, errorResponseContent);
+            throw;
+        }
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        return responseBody;
     }
 
     private async Task<Cookie> GetBromAuthCookie(string cookieUrl)
